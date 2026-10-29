@@ -1,91 +1,74 @@
 INFOGRÁFICO CPA/UNIFEI - GRUPO 3 (DOCENTES)
 ===========================================
 
-O script infografico_cpa.py gera dois arquivos nesta pasta:
+O script infografico_cpa.py lê as planilhas da CPA na pasta dados/ e gera
+dois arquivos nesta pasta:
   - infografico_cpa.png
   - infografico_cpa.pdf (tamanho A4)
 
 
 ARQUIVOS DA PASTA
 -----------------
-  infografico_cpa.py        Script que monta o infográfico.
-  dados_participacao.csv    Dados do gráfico (por enquanto FICTÍCIOS).
-  Atividade_3_...pdf        Enunciado da atividade.
+  infografico_cpa.py               Script que monta o infográfico.
+  dados/participacao.xlsx          Respondentes por semestre, público e campus.
+  dados/respostas_alternativas.xlsx  Respostas das perguntas de múltipla escolha.
+  dados/respostas_notas.xlsx       Notas de 1 a 10 dadas pelos discentes às turmas.
+  dados/dicionario.md              Explicação das colunas e cuidados com os dados.
+  Atividade_3_...pdf               Enunciado da atividade.
 
 
 COMO RODAR
 ----------
-1. Abra um terminal DENTRO desta pasta.
-   No VS Code: menu Terminal > New Terminal (já abre na pasta).
-   Se abrir em outro lugar, entre na pasta com:
-     cd "G:\Meu Drive\02_Mestrado\Disciplinas\Visualização de dados\Atividade infografico"
+1. Abra um terminal nesta pasta (no VS Code: Terminal > New Terminal).
 
-2. Execute:
+2. Na primeira vez, instale as bibliotecas:
+     python -m pip install matplotlib pandas openpyxl
+
+3. Execute:
      python infografico_cpa.py
 
-3. Deve aparecer a mensagem:
+4. O terminal mostra um resumo dos números calculados e, no final:
      Gerado: infografico_cpa.png e infografico_cpa.pdf
 
-4. Abra o PNG ou o PDF para conferir o resultado.
-
-Observações:
-  - Rode SEMPRE de dentro desta pasta. Se não encontrar o CSV, o script
-    usa valores de exemplo (50% em todos os semestres).
-  - Feche o PNG ou o PDF antes de rodar, porque o Windows pode impedir a
-    gravação se o arquivo estiver aberto.
-  - Em outro computador, instale antes a biblioteca:
-      python -m pip install matplotlib
+Observação: feche o PNG ou o PDF antes de rodar, porque o Windows pode
+impedir a gravação se o arquivo estiver aberto.
 
 
-COMO ATUALIZAR COM OS DADOS REAIS
----------------------------------
-1. Edite dados_participacao.csv (Excel ou Bloco de Notas) e mantenha o
-   mesmo formato:
+O QUE O INFOGRÁFICO MOSTRA
+--------------------------
+  1. Respondentes docentes por semestre: 201 > 214 > 147 (-31% em 2025.2).
+     Em Itajubá, foram de 159 para 93; em Itabira, de 55 para 54.
+  2. Pergunta 8.1.1 dos docentes ("Tenho acesso aos resultados ... e realizo
+     ações de melhorias"): a concordância foi de 67% para 80% e depois 82%.
+  3. Pergunta 8.1.1 dos discentes ("A instituição utiliza os resultados ...
+     para promover melhorias"): 48% concordam e 37% ficaram neutros (2025.2).
+     Notas: 484 turmas avaliadas em 2025.2, com média 8,5.
 
-     periodo,docentes_pct,discentes_pct
-     2023.1,38,52
-     2023.2,35,49
-     ...
+Limitações (já indicadas no infográfico):
+  - A base não traz o total de docentes da UNIFEI, então não dá para calcular
+    a TAXA de participação, apenas o número de respondentes. Se a CPA informar
+    o total de docentes por semestre, o gráfico 1 pode passar a mostrar %.
+  - A pergunta 8.1.1 é uma autodeclaração de quem respondeu.
+  - As perguntas de docentes e discentes são diferentes, então não são
+    comparadas lado a lado como se fossem a mesma medida.
 
-   - periodo:        semestre (ex.: 2025.1)
-   - docentes_pct:   % de docentes que responderam à CPA (só o número)
-   - discentes_pct:  % de discentes (opcional; pode deixar vazio)
-   - Use apenas números que estão nos relatórios da CPA.
-   - Se usar o Excel, salve como "CSV UTF-8 (delimitado por vírgulas)".
 
-2. No infografico_cpa.py, no bloco "EDITE AQUI", altere:
+COMO ATUALIZAR
+--------------
+Os GRÁFICOS são calculados das planilhas automaticamente. Os TEXTOS ficam no
+bloco "EDITE AQUI" do infografico_cpa.py e têm números escritos à mão
+(TITULO, NOTA1, SECAO2, PERGUNTA3, NOTA3).
 
-   a) DADOS_FICTICIOS = False
-      (remove a marca "RASCUNHO: DADOS DE EXEMPLO". Mude só quando o CSV
-      tiver os dados reais.)
-
-   b) TITULO: a Big Idea, com o número real do último semestre.
-      Hoje: "Só 27% dos docentes responderam à CPA em 2025.1 ..."
-
-   c) TITULO_GRAFICO: uma afirmação que bata com os dados reais.
-      Hoje: "A participação docente caiu de 38% para 27% em dois anos"
-
-   d) FONTE_GRAFICO: relatório usado, campus, período e abrangência.
-
-   e) FONTES (rodapé): todas as fontes consultadas, incluindo a base
-      legal da CPA (Lei 10.861/2004 - SINAES).
-
-   f) CONTEXTO: confirme "desde 2006" e o texto de "Por que importa".
-
-   g) ACAO_LINHAS: confirme se os relatórios por curso estão em
-      cpa.unifei.edu.br e remova o "[VERIFICAR]".
-
-3. Salve e rode de novo: python infografico_cpa.py
-
-4. Confira na imagem se não sobrou nenhum "[PREENCHER]" ou "[VERIFICAR]".
+Se as planilhas mudarem (por exemplo, um novo semestre):
+  1. Substitua os arquivos em dados/ mantendo os mesmos nomes e colunas.
+  2. Rode o script e confira o resumo impresso no terminal.
+  3. Ajuste os números dos textos no bloco "EDITE AQUI" para bater com o
+     resumo.
+  4. Rode de novo e confira a imagem.
 
 
 AINDA PENDENTE PARA A ENTREGA
 -----------------------------
-  - Evidência para a 2ª parte do desafio: os docentes usarem os resultados
-    da CPA para melhorar as práticas acadêmicas (ex.: um caso real de
-    mudança feita a partir da CPA, ou um fluxo
-    responder > relatório > colegiado > melhoria).
   - Texto de entrega com:
       (a) público-alvo e necessidade de informação
       (b) objetivo da comunicação

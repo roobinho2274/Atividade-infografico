@@ -2,15 +2,12 @@
 Gera infografico_cpa.png e infografico_cpa.pdf (A4).
 
 COMO USAR
-1) Edite o bloco "EDITE AQUI" (titulo, fonte, textos marcados com [PREENCHER]).
-2) Crie dados_participacao.csv (mesma pasta) com as colunas:
-       periodo,docentes_pct,discentes_pct
-       2024.1,41,63
-   (discentes_pct e opcional. Use so numeros que estao nos relatorios da CPA.)
+1) Os dados vem da pasta dados/ (planilhas enviadas pela CPA, ver dados/dicionario.md).
+2) Os graficos sao calculados direto das planilhas. Os textos ficam no bloco
+   "EDITE AQUI": se os dados mudarem, confira se os numeros citados batem com
+   o resumo que o script imprime no terminal.
 3) Rode:  python infografico_cpa.py
-Sem o CSV, o script usa dados de EXEMPLO e marca a imagem como rascunho.
 """
-import csv
 import os
 import textwrap
 
@@ -18,67 +15,126 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import pandas as pd
 from matplotlib.patches import FancyBboxPatch, Rectangle
 
+PASTA = os.path.dirname(os.path.abspath(__file__))
+DADOS = os.path.join(PASTA, "Dados")
+
 # ============================ EDITE AQUI ============================
-# True enquanto dados_participacao.csv tiver valores ficticios: mantem a marca
-# de rascunho na imagem. Mude para False ao colocar os dados reais da CPA.
-DADOS_FICTICIOS = True
-
 TITULO = (
-    "Só 27% dos docentes responderam à CPA em 2025.1:\n"
-    "sem a sua voz, a avaliação não melhora o seu curso"
+    "Só 147 docentes responderam à CPA em 2025.2, 31% a menos.\n"
+    "82% de quem respondeu diz usar os resultados para melhorar"
 )
-SUBTITULO = "Autoavaliação institucional da UNIFEI | Público: docentes"
+SUBTITULO = ("Autoavaliação institucional da UNIFEI, exigida pelo SINAES "
+             "(Lei 10.861/2004) | Público: docentes")
 
-CONTEXTO = [
-    ("O que é",
-     "A CPA conduz a autoavaliação institucional da UNIFEI desde 2006."),
-    ("Quando e onde",
-     "Todo semestre, no SIGAA: Ensino > Avaliação institucional."),
-    ("Por que importa",
-     "Os resultados são considerados por MEC e INEP e influenciam "
-     "reconhecimento de cursos e renovação de credenciamento."),
-]
+SECAO1 = "1. Menos docentes estão sendo ouvidos"
+NOTA1 = ("Em Itajubá, os respondentes caíram de 159 para 93 (-42%). "
+         "Em Itabira, ficaram estáveis (55 para 54).")
 
-TITULO_GRAFICO = "A participação docente caiu de 38% para 27% em dois anos"
-FONTE_GRAFICO = ("Fonte: [PREENCHER: relatório CPA/UNIFEI, campus Itajubá, "
-                 "período, abrangência]")
+SECAO2 = "2. Quem responde usa os resultados: a concordância subiu de 67% para 82%"
+PERGUNTA2 = ("\"Tenho acesso aos resultados das avaliações institucionais e realizo "
+             "ações de melhorias na minha prática profissional\" (docentes)")
+NOTA2 = ("Autodeclaração de quem respondeu: não mede o efeito da CPA nem representa "
+         "os docentes que não participaram.")
+
+SECAO3 = "3. Mas só metade dos estudantes percebe essas melhorias"
+PERGUNTA3 = ("dos estudantes concordam que \"a instituição utiliza os resultados das "
+             "avaliações internas (CPA) e externas (MEC) para promover melhorias\" "
+             "(2025.2). 37% ficaram neutros.")
+NOTA3 = ("E eles avaliam vocês: em 2025.2, estudantes deram notas a 484 turmas "
+         "(média 8,5 de 10). Esse retorno só chega à sua prática se você o consulta.")
 
 ACAO_TITULO = "O que fazer agora"
 ACAO_LINHAS = [
-    "1. Responda a CPA no SIGAA neste semestre.",
-    "2. Consulte o relatório do seu curso em cpa.unifei.edu.br e leve ao colegiado. [VERIFICAR]",
+    "1. Responda à CPA no SIGAA neste semestre: sua visão entra no relatório do campus.",
+    "2. Consulte os resultados e as notas das suas turmas e leve os pontos ao colegiado.",
+    "3. Conte aos alunos o que mudou a partir da avaliação: é isso que fecha o ciclo.",
 ]
 
-FONTES = ("Fontes: CPA/UNIFEI (cpa.unifei.edu.br); UNIFEI, \"CPA 2025.1\" "
-          "(unifei.edu.br/cpa-2025-1); [PREENCHER: relatórios usados no gráfico].")
+FONTES = ("Fonte: CPA/UNIFEI, Avaliação Institucional 2024.2 a 2025.2, respostas agregadas "
+          "de discentes e docentes dos campi Itajubá, Itabira e EaD (participacao.xlsx, "
+          "respostas_alternativas.xlsx, respostas_notas.xlsx). Os semestres anteriores não "
+          "constam na base. O total de docentes da UNIFEI não consta na base: por isso a "
+          "participação aparece em número de respondentes, e não em %. \"Concordam\" = "
+          "Concordo totalmente + Concordo.")
 # ====================================================================
 
 ACCENT = "#0B5563"
 GRAY = "#9AA5AB"
+NEUTRO = "#D5DCDF"
+DISC = "#5F6B71"
 DARK = "#1F2A30"
 LIGHT = "#EEF3F4"
-ALERT = "#C0392B"
+MUTED = "#6B777D"
 
 
 def carregar_dados():
-    if os.path.exists("dados_participacao.csv"):
-        with open("dados_participacao.csv", encoding="utf-8") as f:
-            rows = list(csv.DictReader(f))
-        per = [r["periodo"].strip() for r in rows]
-        doc = [float(r["docentes_pct"].replace(",", ".")) for r in rows]
-        dis = []
-        for r in rows:
-            v = (r.get("discentes_pct") or "").strip()
-            dis.append(float(v.replace(",", ".")) if v else None)
-        return per, doc, dis, DADOS_FICTICIOS
-    per = ["2023.1", "2023.2", "2024.1", "2024.2", "2025.1"]
-    return per, [50] * 5, [50] * 5, True  # valores ficticios, so para testar layout
+    part = pd.read_excel(os.path.join(DADOS, "participacao.xlsx"))
+    alt = pd.read_excel(os.path.join(DADOS, "respostas_alternativas.xlsx"))
+    notas = pd.read_excel(os.path.join(DADOS, "respostas_notas.xlsx"),
+                          sheet_name="notas_por_turma")
+
+    doc = part[part.publico == "Docente"]
+    total = doc.groupby("semestre").participantes.sum()
+    por_campus = doc.pivot_table(index="semestre", columns="campus",
+                                 values="participantes", aggfunc="sum")
+
+    def escala(publico, codigo):
+        # % Concordam (1-2), Neutros (3) e Discordam (4-5) por semestre
+        d = alt[(alt.publico == publico) & (alt.codigo == codigo)]
+        t = d.pivot_table(index="semestre", columns="ordem_alternativa",
+                          values="respostas", aggfunc="sum").fillna(0)
+        n = t.sum(axis=1)
+        return pd.DataFrame({
+            "concordam": t[[1, 2]].sum(axis=1) / n * 100,
+            "neutros": t[3] / n * 100,
+            "discordam": t.drop(columns=[1, 2, 3]).sum(axis=1) / n * 100,
+        })
+
+    turmas = notas.groupby("semestre").turma.nunique()
+    media = notas.groupby("semestre").apply(
+        lambda x: (x.nota * x.respostas).sum() / x.respostas.sum(), include_groups=False)
+    return total, por_campus, escala("Docente", "8.1.1"), escala("Discente", "8.1.1"), turmas, media
+
+
+def imprimir_resumo(total, por_campus, uso_doc, uso_dis, turmas, media):
+    print("Respondentes docentes:", total.to_dict())
+    print("Por campus:\n", por_campus)
+    print("Docentes 8.1.1 (%):\n", uso_doc.round(1))
+    print("Discentes 8.1.1 (%):\n", uso_dis.round(1))
+    print("Turmas avaliadas:", turmas.to_dict(), "| nota media:", media.round(1).to_dict())
+
+
+def barra_escala(ax, linhas, rotulos, cor_conc, legenda=False):
+    # Barras 100% empilhadas: concordam em destaque, o resto em cinza
+    if legenda:  # rotulos diretos sobre os segmentos da primeira barra
+        r = linhas.iloc[0]
+        for txt, x, cor in (("Concordam", 0, cor_conc),
+                            ("Neutros", r.concordam, MUTED),
+                            ("Discordam", r.concordam + r.neutros, GRAY)):
+            ax.text(x, -0.55, txt, color=cor, fontsize=9, fontweight="bold", va="bottom")
+    for i, (_, r) in enumerate(linhas.iterrows()):
+        ax.barh(i, r.concordam, color=cor_conc, height=0.62)
+        ax.barh(i, r.neutros, left=r.concordam, color=NEUTRO, height=0.62)
+        ax.barh(i, r.discordam, left=r.concordam + r.neutros, color=GRAY, height=0.62)
+        ax.text(2, i, f"{r.concordam:.0f}%", color="white", fontsize=10.5,
+                fontweight="bold", va="center")
+    ax.set_yticks(range(len(rotulos)))
+    ax.set_yticklabels(rotulos, color=DARK, fontsize=9.5)
+    ax.set_xlim(0, 100)
+    ax.set_ylim(len(rotulos) - 0.5, -0.5)
+    ax.set_xticks([])
+    for s in ax.spines.values():
+        s.set_visible(False)
+    ax.tick_params(length=0)
 
 
 def main():
-    per, doc, dis, exemplo = carregar_dados()
+    total, por_campus, uso_doc, uso_dis, turmas, media = carregar_dados()
+    imprimir_resumo(total, por_campus, uso_doc, uso_dis, turmas, media)
+
     fig = plt.figure(figsize=(8.27, 11.69), facecolor="white")
     bg = fig.add_axes([0, 0, 1, 1])
     bg.set_xlim(0, 1)
@@ -86,86 +142,78 @@ def main():
     bg.axis("off")
 
     # Cabecalho: a Big Idea e o primeiro ponto de leitura
-    bg.add_patch(Rectangle((0, 0.86), 1, 0.14, color=ACCENT))
-    titulo_wrap = "\n".join(textwrap.fill(l, 58) for l in TITULO.split("\n"))
-    n_linhas = titulo_wrap.count("\n") + 1
-    fs_titulo = 16.5 if n_linhas <= 2 else 13  # evita colidir com o subtitulo
-    bg.text(0.05, 0.975, titulo_wrap, color="white", fontsize=fs_titulo,
-            fontweight="bold", va="top", linespacing=1.25)
-    bg.text(0.05, 0.875, SUBTITULO, color="#CFE3E7", fontsize=10, va="bottom")
+    bg.add_patch(Rectangle((0, 0.875), 1, 0.125, color=ACCENT))
+    titulo_wrap = "\n".join(textwrap.fill(l, 62) for l in TITULO.split("\n"))
+    bg.text(0.05, 0.972, titulo_wrap, color="white", fontsize=15,
+            fontweight="bold", va="top", linespacing=1.3)
+    bg.text(0.05, 0.888, SUBTITULO, color="#CFE3E7", fontsize=9, va="bottom")
 
-    # Contexto: 3 blocos iguais (similaridade) e proximos (proximidade)
-    x0, w, gap = 0.05, 0.28, 0.025
-    for i, (cab, corpo) in enumerate(CONTEXTO):
-        x = x0 + i * (w + gap)
-        bg.add_patch(FancyBboxPatch((x, 0.70), w, 0.135,
-                                    boxstyle="round,pad=0.004,rounding_size=0.01",
-                                    facecolor=LIGHT, edgecolor="none"))
-        bg.text(x + 0.015, 0.82, cab, color=ACCENT, fontsize=10.5,
-                fontweight="bold", va="top")
-        bg.text(x + 0.015, 0.795, textwrap.fill(corpo, 31), color=DARK,
-                fontsize=8.6, va="top", linespacing=1.3)
-
-    # Grafico: titulo-afirmacao, uma cor de destaque, rotulos diretos
-    bg.text(0.05, 0.665, TITULO_GRAFICO, color=DARK, fontsize=11.5,
-            fontweight="bold", va="bottom")
-    ax = fig.add_axes([0.10, 0.31, 0.80, 0.33])
-    x = list(range(len(per)))
-    ax.plot(x, doc, color=ACCENT, lw=3, marker="o", ms=7, zorder=3)
-    ax.scatter([x[-1]], [doc[-1]], s=170, color=ACCENT, zorder=4)
-    for xi, v in zip(x, doc):
-        ax.annotate(f"{v:.0f}%", (xi, v), textcoords="offset points",
-                    xytext=(0, 11), ha="center", color=ACCENT,
-                    fontsize=10, fontweight="bold")
-    ult_dis = next((v for v in reversed(dis) if v is not None), None)
-    doc_acima = ult_dis is None or doc[-1] >= ult_dis
-    ax.annotate("Docentes", (x[-1], doc[-1]), textcoords="offset points",
-                xytext=(14, 4 if doc_acima else -12), color=ACCENT,
-                fontsize=10, fontweight="bold")
-    if any(v is not None for v in dis):
-        xs = [xi for xi, v in zip(x, dis) if v is not None]
-        ys = [v for v in dis if v is not None]
-        ax.plot(xs, ys, color=GRAY, lw=2, marker="o", ms=5, zorder=2)
-        ax.annotate("Discentes", (xs[-1], ys[-1]), textcoords="offset points",
-                    xytext=(14, -12 if doc_acima else 4), color=GRAY,
-                    fontsize=10, fontweight="bold")
-    ax.set_xticks(x)
-    ax.set_xticklabels(per, color=DARK, fontsize=9)
-    ax.set_xlim(-0.4, len(per) - 1 + 1.1)
-    ax.set_ylim(0, 100)  # eixo comeca em zero: sem distorcao
-    ax.set_yticks([0, 25, 50, 75, 100])
-    ax.set_yticklabels([f"{t}%" for t in [0, 25, 50, 75, 100]], color=GRAY, fontsize=8.5)
-    ax.grid(axis="y", color="#E3E8EA", lw=0.8)
-    ax.set_axisbelow(True)
+    # Secao 1: participacao (contagens, eixo a partir de zero)
+    bg.text(0.05, 0.84, SECAO1, color=DARK, fontsize=12.5, fontweight="bold", va="bottom")
+    ax1 = fig.add_axes([0.07, 0.64, 0.52, 0.185])
+    sem = list(total.index)
+    cores = [GRAY] * (len(sem) - 1) + [ACCENT]
+    ax1.bar(range(len(sem)), total.values, color=cores, width=0.6)
+    for i, v in enumerate(total.values):
+        ax1.text(i, v + 6, f"{v:.0f}", ha="center", color=cores[i],
+                 fontsize=12, fontweight="bold")
+    ax1.set_xticks(range(len(sem)))
+    ax1.set_xticklabels(sem, color=DARK, fontsize=9.5)
+    ax1.set_ylim(0, total.max() * 1.2)
+    ax1.set_yticks([])
     for s in ("top", "right", "left"):
-        ax.spines[s].set_visible(False)
-    ax.spines["bottom"].set_color(GRAY)
-    ax.tick_params(length=0)
-    bg.text(0.05, 0.272, textwrap.fill(FONTE_GRAFICO, 95), color="#6B777D",
-            fontsize=7.8, va="top")
+        ax1.spines[s].set_visible(False)
+    ax1.spines["bottom"].set_color(GRAY)
+    ax1.tick_params(length=0)
+    bg.text(0.05, 0.622, "Docentes que concluíram o questionário, por semestre",
+            color=MUTED, fontsize=8, va="top")
+
+    queda = (1 - total.iloc[-1] / total.iloc[-2]) * 100
+    bg.add_patch(FancyBboxPatch((0.63, 0.655), 0.32, 0.165,
+                                boxstyle="round,pad=0.004,rounding_size=0.01",
+                                facecolor=LIGHT, edgecolor="none"))
+    bg.text(0.65, 0.805, f"-{queda:.0f}%", color=ACCENT, fontsize=30,
+            fontweight="bold", va="top")
+    bg.text(0.65, 0.745, "de 2025.1 para 2025.2", color=ACCENT, fontsize=9.5,
+            fontweight="bold", va="top")
+    bg.text(0.65, 0.722, textwrap.fill(NOTA1, 36), color=DARK, fontsize=8.6,
+            va="top", linespacing=1.3)
+
+    # Secao 2: docentes usam os resultados (mesma codificacao da secao 3)
+    bg.text(0.05, 0.575, SECAO2, color=DARK, fontsize=12.5, fontweight="bold", va="bottom")
+    bg.text(0.05, 0.568, textwrap.fill(PERGUNTA2, 105), color=MUTED, fontsize=8.2,
+            va="top", style="italic")
+    ax2 = fig.add_axes([0.15, 0.43, 0.80, 0.095])
+    barra_escala(ax2, uso_doc, list(uso_doc.index), ACCENT, legenda=True)
+    bg.text(0.05, 0.418, NOTA2, color=MUTED, fontsize=8, va="top")
+
+    # Secao 3: percepcao dos estudantes
+    bg.text(0.05, 0.37, SECAO3, color=DARK, fontsize=12.5, fontweight="bold", va="bottom")
+    ult_dis = uso_dis.iloc[-1]
+    bg.text(0.05, 0.355, f"{ult_dis.concordam:.0f}%", color=DISC, fontsize=34,
+            fontweight="bold", va="top")
+    bg.text(0.24, 0.355, textwrap.fill(PERGUNTA3, 72), color=DARK, fontsize=9,
+            va="top", linespacing=1.3)
+    ax3 = fig.add_axes([0.24, 0.282, 0.71, 0.03])
+    barra_escala(ax3, uso_dis.iloc[[-1]], [""], DISC)
+    bg.text(0.05, 0.268, textwrap.fill(NOTA3, 105), color=DARK, fontsize=8.8,
+            va="top", linespacing=1.3)
 
     # Chamada a acao
-    bg.add_patch(FancyBboxPatch((0.05, 0.09), 0.90, 0.145,
+    bg.add_patch(FancyBboxPatch((0.05, 0.085), 0.90, 0.135,
                                 boxstyle="round,pad=0.004,rounding_size=0.012",
                                 facecolor="white", edgecolor=ACCENT, lw=2.2))
-    bg.text(0.075, 0.22, ACAO_TITULO, color=ACCENT, fontsize=13,
+    bg.text(0.075, 0.207, ACAO_TITULO, color=ACCENT, fontsize=13,
             fontweight="bold", va="top")
     for j, linha in enumerate(ACAO_LINHAS):
-        bg.text(0.075, 0.18 - j * 0.04, textwrap.fill(linha, 82), color=DARK,
-                fontsize=9.6, va="top")
+        bg.text(0.075, 0.172 - j * 0.03, linha, color=DARK, fontsize=9.4, va="top")
 
     # Rodape
-    bg.text(0.05, 0.07, textwrap.fill(FONTES, 120), color="#6B777D",
-            fontsize=7.4, va="top")
+    bg.text(0.05, 0.068, textwrap.fill(FONTES, 125), color=MUTED,
+            fontsize=7, va="top", linespacing=1.3)
 
-    if exemplo:
-        fig.text(0.5, 0.47, "RASCUNHO: DADOS DE EXEMPLO", rotation=22,
-                 fontsize=32, color=ALERT, alpha=0.22, ha="center",
-                 va="center", fontweight="bold")
-        print("ATENCAO: usando valores de EXEMPLO (sem CSV ou DADOS_FICTICIOS = True).")
-
-    fig.savefig("infografico_cpa.png", dpi=200)
-    fig.savefig("infografico_cpa.pdf")
+    fig.savefig(os.path.join(PASTA, "infografico_cpa.png"), dpi=200)
+    fig.savefig(os.path.join(PASTA, "infografico_cpa.pdf"))
     print("Gerado: infografico_cpa.png e infografico_cpa.pdf")
 
 
